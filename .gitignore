@@ -1,0 +1,7 @@
+zig-cache
+*.exe
+*.pdb
+/main
+/zig-out/
+/.idea
+*.bak
