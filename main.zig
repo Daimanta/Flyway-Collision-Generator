@@ -62,8 +62,8 @@ pub fn main() !void {
             crc32_state.update(line);
         }
     }
-    const target_hash = crc32_state.final();
-    _ = target_hash;
+    // Skip inversion for small time save
+    const target_hash = crc32_state.crc;
     
     const first_value: u8 = 33;
     const last_value: u8 = 126;
@@ -103,7 +103,7 @@ pub fn main() !void {
                             while (j5 <= last_value): (j5 += 1) {
                                 var inner5 = inner4;
                                 inner5.update(&.{j5});
-                                const calc_val = inner5.final();
+                                const calc_val = inner5.crc;
                                 if (calc_val == target_hash) {
                                     test_state[3] = j0;
                                     test_state[4] = j1;
