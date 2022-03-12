@@ -10,11 +10,12 @@ var default_allocator = std.heap.page_allocator;
 
 const help_message = 
 \\Usage: crc-collision [OPTION] FILE 
-\\ Generates an SQL file with the same CRC32 checksum as the target file.
+\\ Generates an SQL string with the same CRC32 checksum as the target FILE.
 \\
 \\ If arguments are possible, they are mandatory unless specified otherwise.
 \\        -h, --help              Display this help and exit.
 \\        -c, --comment           Produces a single commented line (default)
+\\        -f, --file <SRC>        The resulting string, when appended to SRC matches the same hash as the target FILE
 \\
 ;
 
@@ -104,6 +105,7 @@ pub fn main() !void {
     const params = comptime [_]clap.Param(clap.Help){
         clap.parseParam("-c, --comment") catch unreachable,
         clap.parseParam("-h, --help") catch unreachable,
+        clap.parseParam("-f, --file <STR>") catch unreachable,
         clap.parseParam("<STR>") catch unreachable,
     };
     
@@ -119,21 +121,37 @@ pub fn main() !void {
         std.os.exit(0);
     }
     
+    const supplemented_file = args.option("-f");
     const positionals = args.positionals();
 
     if (positionals.len != 1) {
-        print("One file can and must be supplied. Exiting\n", .{});
+        print("One file can and must be supplied as the hash origin. Exiting\n", .{});
         std.os.exit(1);
     }
-    
-    const file = std.fs.cwd().openFile(positionals[0], .{.read = true}) catch {
-        print("Could not read file. Exiting\n", .{});
+        
+    var crc32_state = getFlywayCrcFromFile(positionals[0]);
+    // Skip inversion for time save
+    const target_hash = crc32_state.crc;
+    if (supplemented_file != null) {
+        const current_state = getFlywayCrcFromFile(supplemented_file.?);
+        bruteforceCrc(current_state.crc, target_hash);
+    } else {
+        bruteforceCrc(0xffffffff, target_hash);
+    }
+}
+
+fn getFlywayCrcFromFile(location: []const u8) crc32 {  
+    const file = std.fs.cwd().openFile(location, .{.read = true}) catch {
+        print("Could not read file '{s}'. Exiting\n", .{location});
         std.os.exit(1);
     };
     defer file.close();
     
     var crc32_state = crc32.init();
-    const bytes = try file.readToEndAlloc(default_allocator, 1 << 30);
+    const bytes = file.readToEndAlloc(default_allocator, 1 << 30) catch {
+        print("Error while reading '{s}'. Exiting\n", .{location});
+        std.os.exit(1);
+    };
     var tokens = std.mem.tokenize(u8, bytes, "\n");
     while (tokens.next()) |line| {
         if (line.len == 0) {
@@ -144,9 +162,10 @@ pub fn main() !void {
             crc32_state.update(line);
         }
     }
-    // Skip inversion for small time save
-    const target_hash = crc32_state.crc;
-    
+    return crc32_state;
+}
+
+fn bruteforceCrc(initial_crc: u32, desired_inverted_crc: u32) void {
     const first_value: u8 = 33;
     const last_value: u8 = 126;
     var test_state = [_]u8{'-', '-', ' ', 0, 0, 0, 0, 0, 0};
@@ -159,6 +178,7 @@ pub fn main() !void {
     var j5 = first_value;
     {    
         var initial = crc32.init();
+        initial.crc = initial_crc;
         initial.update("-- ");
         
         @setRuntimeSafety(false);
@@ -184,14 +204,14 @@ pub fn main() !void {
                             inner4.update(&.{j4});
                             while (j5 <= last_value): (j5 += 1) {
                                 const last_state_crc = inner4.crc;
-                                const lookup_check = (last_state_crc >> 8) ^ target_hash;
+                                const lookup_check = (last_state_crc >> 8) ^ desired_inverted_crc;
                                 if (std.sort.binarySearch(u32, lookup_check, lookup[0..], {}, order_u32) == null) {
                                     break;
                                 }                                
                                 var inner5 = inner4;
                                 inner5.update(&.{j5});
                                 const calc_val = inner5.crc;
-                                if (calc_val == target_hash) {
+                                if (calc_val == desired_inverted_crc) {
                                     test_state[3] = j0;
                                     test_state[4] = j1;
                                     test_state[5] = j2;
@@ -208,8 +228,9 @@ pub fn main() !void {
             }
         }
     }
+    print("No match found\n", .{});
+    std.os.exit(1);
 }
-
 
 pub fn print(comptime format_string: []const u8, args: anytype) void {
     std.io.getStdOut().writer().print(format_string, args) catch return;

@@ -11,4 +11,5 @@ Usage: crc-collision [OPTION] FILE
  If arguments are possible, they are mandatory unless specified otherwise.
         -h, --help              Display this help and exit.
         -c, --comment           Produces a single commented line (default)
+        -f, --file <SRC>        The resulting string, when appended to SRC matches the same hash as the target FILE
 ```
