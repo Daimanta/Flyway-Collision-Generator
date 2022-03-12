@@ -76,21 +76,41 @@ pub fn main() !void {
     var j4 = first_value;
     var j5 = first_value;
     {    
+        var initial = crc32.init();
+        initial.update("-- ");
+        
         @setRuntimeSafety(false);
         while (j0 <= last_value): (j0 += 1) {
             j1 = first_value;
+            var inner0 = initial;
+            inner0.update(&.{j0});
             while (j1 <= last_value): (j1 += 1) {
                 j2 = first_value;
+                var inner1 = inner0;
+                inner1.update(&.{j1});
                 while (j2 <= last_value): (j2 += 1) {
                     j3 = first_value;
+                    var inner2 = inner1;
+                    inner2.update(&.{j2});
                     while (j3 <= last_value): (j3 += 1) {
                         j4 = first_value;
+                        var inner3 = inner2;
+                        inner3.update(&.{j3});
                         while (j4 <= last_value): (j4 += 1) {
                             j5 = first_value;
+                            var inner4 = inner3;
+                            inner4.update(&.{j4});
                             while (j5 <= last_value): (j5 += 1) {
-                                test_state = [_]u8{'-', '-', ' ', j0, j1, j2, j3, j4, j5};
-                                const calc_val = crc32.hash(test_state[0..]);
+                                var inner5 = inner4;
+                                inner5.update(&.{j5});
+                                const calc_val = inner5.final();
                                 if (calc_val == target_hash) {
+                                    test_state[3] = j0;
+                                    test_state[4] = j1;
+                                    test_state[5] = j2;
+                                    test_state[6] = j3;
+                                    test_state[7] = j4;
+                                    test_state[8] = j5;
                                     print("{s}\n", .{test_state});
                                     std.os.exit(0);
                                 }
