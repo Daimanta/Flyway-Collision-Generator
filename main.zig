@@ -102,27 +102,32 @@ fn order_u32(context: void, lhs: u32, rhs: u32) std.math.Order {
 
 
 pub fn main() !void {
+    comptime var str: []const u8 = "<STR>";
     const params = comptime [_]clap.Param(clap.Help){
         clap.parseParam("-c, --comment") catch unreachable,
         clap.parseParam("-h, --help") catch unreachable,
         clap.parseParam("-f, --file <STR>") catch unreachable,
-        clap.parseParam("<STR>") catch unreachable,
+        clap.parseParam(str) catch unreachable,
+    };
+
+   const parsers = comptime .{
+        .STR = clap.parsers.string
     };
     
     var diag = clap.Diagnostic{};
-    var args = clap.parse(clap.Help, &params, .{ .diagnostic = &diag }) catch |err| {
+    var args = clap.parse(clap.Help, &params, parsers, .{ .diagnostic = &diag }) catch |err| {
         diag.report(std.io.getStdOut().writer(), err) catch {};
         return;
     };
     defer args.deinit();
     
-    if (args.flag("--help")) {
+    if (args.args.help) {
         print(help_message, .{});
         std.os.exit(0);
     }
     
-    const supplemented_file = args.option("-f");
-    const positionals = args.positionals();
+    const supplemented_file = args.args.file;
+    const positionals = args.positionals;
 
     if (positionals.len != 1) {
         print("One file can and must be supplied as the hash origin. Exiting\n", .{});
@@ -141,7 +146,7 @@ pub fn main() !void {
 }
 
 fn getFlywayCrcFromFile(location: []const u8) crc32 {  
-    const file = std.fs.cwd().openFile(location, .{.read = true}) catch {
+    const file = std.fs.cwd().openFile(location, .{}) catch {
         print("Could not read file '{s}'. Exiting\n", .{location});
         std.os.exit(1);
     };
