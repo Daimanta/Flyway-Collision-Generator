@@ -6,7 +6,7 @@
 
 Flyway Collission Generator is licensed under the '3-clause BSD' license.
 
-Copyright (c) 2022, Léon van der Kaap
+Copyright (c) 2023, Léon van der Kaap
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without

@@ -89,7 +89,7 @@ const lookup = block: {
     };
     
     const asc_u32 = std.sort.asc(u32);
-    std.sort.sort(u32, tables[0..], {}, asc_u32);
+    std.sort.block(u32, tables[0..], {}, asc_u32);
     
     
     break :block tables;
@@ -110,24 +110,20 @@ pub fn main() !void {
         clap.parseParam(str) catch unreachable,
     };
 
-   const parsers = comptime .{
-        .STR = clap.parsers.string
-    };
-    
     var diag = clap.Diagnostic{};
-    var args = clap.parse(clap.Help, &params, parsers, .{ .diagnostic = &diag }) catch |err| {
-        diag.report(std.io.getStdOut().writer(), err) catch {};
-        return;
-    };
+    var args = clap.parse(clap.Help, &params, .{ .diagnostic = &diag }) catch |err| {
+            diag.report(std.io.getStdOut().writer(), err) catch {};
+            return;
+        };
     defer args.deinit();
     
-    if (args.args.help) {
+    if (args.flag("--help")) {
         print(help_message, .{});
         std.os.exit(0);
     }
     
-    const supplemented_file = args.args.file;
-    const positionals = args.positionals;
+    const supplemented_file = args.option("-f");
+    const positionals = args.positionals();
 
     if (positionals.len != 1) {
         print("One file can and must be supplied as the hash origin. Exiting\n", .{});
