@@ -203,12 +203,12 @@ fn bruteforceCrc(initial_crc: u32, desired_inverted_crc: u32) void {
                             j5 = first_value;
                             var inner4 = inner3;
                             inner4.update(&.{j4});
+                            const last_state_crc = inner4.crc;
+                            const lookup_check = (last_state_crc >> 8) ^ desired_inverted_crc;
+                            if (std.sort.binarySearch(u32, lookup_check, lookup[0..], {}, order_u32) == null) {
+                                continue;
+                            }
                             while (j5 <= last_value): (j5 += 1) {
-                                const last_state_crc = inner4.crc;
-                                const lookup_check = (last_state_crc >> 8) ^ desired_inverted_crc;
-                                if (std.sort.binarySearch(u32, lookup_check, lookup[0..], {}, order_u32) == null) {
-                                    break;
-                                }                                
                                 var inner5 = inner4;
                                 inner5.update(&.{j5});
                                 const calc_val = inner5.crc;
